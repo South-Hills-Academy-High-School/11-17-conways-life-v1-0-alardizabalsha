@@ -2,10 +2,41 @@ namespace SpriteKind {
     export const cursor = SpriteKind.create()
     export const newCursor = SpriteKind.create()
 }
+function UpdateGrid () {
+    NextGrid = []
+    for (let row = 0; row <= 11; row++) {
+        NextGrid.push([])
+        for (let column = 0; column <= 15; column++) {
+            CurrentCellAliveorDead = grid[row][column]
+            CurrentCellNeighbors = countNeighbors(row, column)
+            if (CurrentCellAliveorDead == 1 && CurrentCellNeighbors < 2) {
+                NextGrid[row].push(0)
+            } else if (CurrentCellAliveorDead == 1 && CurrentCellNeighbors > 3) {
+                NextGrid[row].push(0)
+            } else if (CurrentCellAliveorDead == 0 && CurrentCellNeighbors == 3) {
+                NextGrid[row].push(1)
+            } else {
+                NextGrid[row].push(CurrentCellAliveorDead)
+            }
+        }
+    }
+    grid = NextGrid
+}
 controller.up.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (cursorGridRow == 0) {
+        cursorGridRow += 12
+        cursorY += 120
+    }
     cursorGridRow += -1
     cursorY += -10
     drawGrid()
+})
+function AutoOff () {
+    autoflag = 0
+}
+controller.B.onEvent(ControllerButtonEvent.Pressed, function () {
+    drawGrid()
+    UpdateGrid()
 })
 function countNeighborsBottomLeft () {
     neighborCount = 0
@@ -24,10 +55,26 @@ controller.A.onEvent(ControllerButtonEvent.Pressed, function () {
     drawGrid()
 })
 controller.left.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (cursorGridCol == 0) {
+        cursorGridCol += 16
+        cursorX += 160
+    }
     cursorGridCol += -1
     cursorX += -10
     drawGrid()
 })
+function CountNeighborsWrapRight (CurrentRow: number, CurrentCol: number) {
+    neighborCount = 0
+    neighborCount += copyLeft(CurrentRow - 1)
+    neighborCount += grid[CurrentRow - 1][CurrentCol + 0]
+    neighborCount += grid[CurrentRow - 1][CurrentCol - 1]
+    neighborCount += grid[CurrentRow - 0][CurrentCol - 1]
+    neighborCount += grid[CurrentRow + 1][CurrentCol - 1]
+    neighborCount += grid[CurrentRow + 1][CurrentCol + 0]
+    neighborCount += copyLeft(CurrentRow + 1)
+    neighborCount += copyLeft(CurrentRow + 0)
+    return neighborCount
+}
 function copyBottom () {
     return grid[11]
 }
@@ -35,6 +82,10 @@ function copyRight (whichRow: number) {
     return grid[whichRow][15]
 }
 controller.right.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (cursorGridCol == 15) {
+        cursorGridCol += -16
+        cursorX += 160
+    }
     cursorGridCol += 1
     cursorX += 10
     drawGrid()
@@ -103,6 +154,18 @@ function countNeighborsTopLeft () {
     neighborCount += copyBottom()[1]
     return neighborCount
 }
+function CountNeighborsWrapLeft (CurrentRow: number, CurrentCol: number) {
+    neighborCount = 0
+    neighborCount += copyRight(CurrentRow - 1)
+    neighborCount += grid[CurrentRow - 1][CurrentCol + 0]
+    neighborCount += grid[CurrentRow - 1][CurrentCol + 1]
+    neighborCount += grid[CurrentRow - 0][CurrentCol + 1]
+    neighborCount += grid[CurrentRow + 1][CurrentCol + 1]
+    neighborCount += grid[CurrentRow + 1][CurrentCol + 0]
+    neighborCount += copyRight(CurrentRow + 1)
+    neighborCount += copyRight(CurrentRow + 0)
+    return neighborCount
+}
 function countNeighborsBottomRight () {
     neighborCount = 0
     neighborCount += grid[11 - 0][15 - 1]
@@ -121,6 +184,10 @@ function countNeighbors (currentRow: number, currentCol: number) {
         return countNeighborsWrapTop(currentRow, currentCol)
     } else if (currentRow == 11) {
         return countNeighborsWrapBottom(currentRow, currentCol)
+    } else if (currentCol == 0) {
+        return CountNeighborsWrapLeft(currentRow, currentCol)
+    } else if (currentCol == 15) {
+        return CountNeighborsWrapRight(currentRow, currentCol)
     } else {
         neighborCount += grid[currentRow - 1][currentCol - 1]
         neighborCount += grid[currentRow - 1][currentCol - 0]
@@ -134,6 +201,10 @@ function countNeighbors (currentRow: number, currentCol: number) {
     }
 }
 controller.down.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (cursorGridRow == 11) {
+        cursorGridRow += -12
+        cursorY += -120
+    }
     cursorGridRow += 1
     cursorY += 10
     drawGrid()
@@ -150,8 +221,18 @@ function countNeighborsTopRight () {
     neighborCount += copyBottom()[14]
     return neighborCount
 }
+controller.menu.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (game.ask(" Auto Update? (A)", " No Auto Update? (B)")) {
+        AutoOn()
+    } else {
+        AutoOff()
+    }
+})
 function copyLeft (whichRow: number) {
     return grid[whichRow][0]
+}
+function AutoOn () {
+    autoflag = 1
 }
 function countNeighborsWrapBottom (currentRow: number, currentCol: number) {
     neighborCount = 0
@@ -179,6 +260,10 @@ let currentX = 0
 let currentY = 0
 let gridSprites: Sprite[] = []
 let neighborCount = 0
+let autoflag = 0
+let CurrentCellNeighbors = 0
+let CurrentCellAliveorDead = 0
+let NextGrid: number[][] = []
 let neighborCountSprite: TextSprite = null
 let cursorY = 0
 let cursorX = 0
@@ -213,3 +298,10 @@ cursor.z = 10
 neighborCountSprite = textsprite.create("")
 neighborCountSprite.z = 10
 drawGrid()
+AutoOff()
+game.onUpdateInterval(200, function () {
+    if (autoflag == 1) {
+        UpdateGrid()
+        drawGrid()
+    }
+})
